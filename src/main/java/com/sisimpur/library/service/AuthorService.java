@@ -5,7 +5,12 @@ import com.sisimpur.library.model.Book;
 import com.sisimpur.library.repository.AuthorRepository;
 import com.sisimpur.library.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -124,6 +129,17 @@ public class AuthorService {
         }
 
         return savedAuthor;
+    }
+
+    public void deleteAuthorById(Long id) {
+        Optional<Author> existingAuthor = authorRepository.findById(id);
+
+        if (existingAuthor.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + id);
+        }
+
+        // Delete the author (Cascade delete will remove books)
+        authorRepository.deleteById(id);
     }
 
 }

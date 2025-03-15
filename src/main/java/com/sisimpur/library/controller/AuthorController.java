@@ -5,11 +5,13 @@ import com.sisimpur.library.model.Book;
 import com.sisimpur.library.repository.AuthorRepository;
 import com.sisimpur.library.service.AuthorService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/authors")
@@ -55,6 +57,12 @@ public class AuthorController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Something went wrong!"));
         }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteAuthor(@PathVariable Long id) {
+        authorService.deleteAuthorById(id);
+        return ResponseEntity.ok("Author deleted successfully.");
     }
 
 }
