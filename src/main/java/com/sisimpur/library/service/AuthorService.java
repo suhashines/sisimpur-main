@@ -59,6 +59,7 @@ public class AuthorService {
     public Author createAuthor(Map<String, Object> authorData) {
         String name = (String) authorData.get("name");
 
+        System.out.println("got author name "+name);
         // Author name is mandatory
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Author name cannot be empty.");

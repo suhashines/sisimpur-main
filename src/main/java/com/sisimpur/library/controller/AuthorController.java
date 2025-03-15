@@ -45,7 +45,7 @@ public class AuthorController {
         }
     }
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<?> createAuthor(@RequestBody Map<String, Object> authorData) {
         try {
             Author createdAuthor = authorService.createAuthor(authorData);
