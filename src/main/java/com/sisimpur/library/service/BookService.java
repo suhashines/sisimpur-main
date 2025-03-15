@@ -33,46 +33,64 @@ public class BookService {
 
 
     public Book createBook(Map<String, Object> bookData) {
-
         try {
-                String title = (String) bookData.get("title");
-                System.out.println("Received book title: " + title);
-                String genre = (String) bookData.get("genre");
-
-                // Validate published year
-                if (!(bookData.get("published_year") instanceof Number)) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Published year must be an integer.");
-                }
-                int publishedYear = ((Number) bookData.get("published_year")).intValue();
-
-                // Validate author ID
-                if (!(bookData.get("author_id") instanceof Number)) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Author ID must be a number.");
-                }
-                Long authorId = ((Number) bookData.get("author_id")).longValue();
-
-                Optional<Author> author = authorRepository.findById(authorId);
-                if (author.isEmpty()) {
-                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
-                }
-
-                // Create and save book
-                Book book = new Book();
-                book.setTitle(title);
-                book.setGenre(genre);
-                book.setPublishedYear(publishedYear);
-                book.setAuthor(author.get());
-
-                return bookRepository.save(book);
-
-            } catch (ClassCastException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid data type provided.");
-            } catch (ResponseStatusException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+            // Validate title (mandatory)
+            String title = (String) bookData.get("title");
+            if (title == null || title.trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book title cannot be empty.");
             }
+
+            // Genre is optional (if empty string, store as null)
+            String genre = bookData.containsKey("genre") && !((String) bookData.get("genre")).trim().isEmpty()
+                    ? (String) bookData.get("genre")
+                    : null;
+
+            // Published year is optional (if empty string, set to 0)
+            int publishedYear = 0;
+            if (bookData.containsKey("published_year")) {
+                Object publishedYearObj = bookData.get("published_year");
+                if (publishedYearObj instanceof Number) {
+                    publishedYear = ((Number) publishedYearObj).intValue();
+                } else if (publishedYearObj instanceof String && !((String) publishedYearObj).trim().isEmpty()) {
+                    try {
+                        publishedYear = Integer.parseInt((String) publishedYearObj);
+                    } catch (NumberFormatException e) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Published year must be a valid integer.");
+                    }
+                }
+            }
+
+            // Validate author ID (mandatory)
+            if (!(bookData.get("author_id") instanceof Number)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Author ID must be a number.");
+            }
+            Long authorId = ((Number) bookData.get("author_id")).longValue();
+
+            // Fetch author
+            Optional<Author> author = authorRepository.findById(authorId);
+            if (author.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
+            }
+
+            // Create and save book
+            Book book = new Book();
+            book.setTitle(title);
+            book.setGenre(genre);  // Stores null if empty string
+            book.setPublishedYear(publishedYear);  // Defaults to 0 if empty
+            book.setAuthor(author.get());
+
+            return bookRepository.save(book);
+
+        } catch (ClassCastException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid data type provided.");
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
         }
+    }
+
+
 
     public Book updateBook(Long bookId, Map<String, Object> bookData) {
 
