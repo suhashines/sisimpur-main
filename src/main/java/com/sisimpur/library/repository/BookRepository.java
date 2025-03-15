@@ -8,5 +8,4 @@ import com.sisimpur.library.model.Book;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
 
-
 }
