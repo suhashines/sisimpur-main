@@ -59,7 +59,8 @@ public class AuthorService {
     public Author createAuthor(Map<String, Object> authorData) {
         String name = (String) authorData.get("name");
 
-        System.out.println("got author name "+name);
+        System.out.println("got author name " + name);
+
         // Author name is mandatory
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("Author name cannot be empty.");
@@ -87,16 +88,31 @@ public class AuthorService {
                     throw new IllegalArgumentException("Book title cannot be empty.");
                 }
 
-                String genre = (String) bookMap.getOrDefault("genre", null);
-                Integer publishedYear = bookMap.containsKey("published_year")
-                        ? ((Number) bookMap.get("published_year")).intValue()
+                // Handle genre (if empty, set as null)
+                String genre = bookMap.containsKey("genre") && !((String) bookMap.get("genre")).trim().isEmpty()
+                        ? (String) bookMap.get("genre")
                         : null;
+
+                // Handle published_year (if empty, set as 0)
+                int publishedYear = 0;
+                if (bookMap.containsKey("published_year")) {
+                    Object publishedYearObj = bookMap.get("published_year");
+                    if (publishedYearObj instanceof Number) {
+                        publishedYear = ((Number) publishedYearObj).intValue();
+                    } else if (publishedYearObj instanceof String && !((String) publishedYearObj).trim().isEmpty()) {
+                        try {
+                            publishedYear = Integer.parseInt((String) publishedYearObj);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Published year must be a valid integer.");
+                        }
+                    }
+                }
 
                 // Create and save book
                 Book book = new Book();
                 book.setTitle(title);
                 book.setGenre(genre); // Nullable
-                book.setPublishedYear(publishedYear != null ? publishedYear : 0); // Default 0 if missing
+                book.setPublishedYear(publishedYear); // Defaults to 0 if empty
                 book.setAuthor(savedAuthor);
                 books.add(book);
             }
@@ -109,4 +125,5 @@ public class AuthorService {
 
         return savedAuthor;
     }
+
 }
