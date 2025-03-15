@@ -41,4 +41,32 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
+    public User updateUser(Long id, User updatedUser) {
+        // Find existing user
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id));
+
+        // Update name if provided and not empty
+        if (updatedUser.getName() != null && !updatedUser.getName().trim().isEmpty()) {
+            existingUser.setName(updatedUser.getName().trim());
+        }
+
+        // Update email if provided
+        if (updatedUser.getEmail() != null) {
+            String email = updatedUser.getEmail().trim();
+            if (!email.isEmpty()) {
+                // Check if email already exists for another user
+                Optional<User> existingEmailUser = userRepository.findByEmail(email);
+                if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(id)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+                }
+                existingUser.setEmail(email);
+            } else {
+                existingUser.setEmail(null); // Normalize empty string to null
+            }
+        }
+
+        return userRepository.save(existingUser);
+    }
 }
