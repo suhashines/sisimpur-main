@@ -73,4 +73,61 @@ public class BookService {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
             }
         }
+
+    public Book updateBook(Long bookId, Map<String, Object> bookData) {
+
+        Optional<Book> existingBook = bookRepository.findById(bookId);
+        if (existingBook.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with ID: " + bookId);
+        }
+
+        Book book = existingBook.get();
+
+        try {
+            if (bookData.containsKey("title")) {
+                book.setTitle((String) bookData.get("title"));
+            }
+
+            if (bookData.containsKey("genre")) {
+                book.setGenre((String) bookData.get("genre"));
+            }
+
+            if (bookData.containsKey("published_year")) {
+                if (!(bookData.get("published_year") instanceof Number)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Published year must be an integer.");
+                }
+                book.setPublishedYear(((Number) bookData.get("published_year")).intValue());
+            }
+
+            if (bookData.containsKey("author_id")) {
+                if (!(bookData.get("author_id") instanceof Number)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Author ID must be a number.");
+                }
+                Long authorId = ((Number) bookData.get("author_id")).longValue();
+                Optional<Author> author = authorRepository.findById(authorId);
+                if (author.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
+                }
+                book.setAuthor(author.get());
+            }
+
+            return bookRepository.save(book);
+
+        } catch (ClassCastException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid data type provided.");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        }
     }
+
+    public void deleteBook(Long bookId) {
+        Optional<Book> existingBook = bookRepository.findById(bookId);
+        if (existingBook.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with ID: " + bookId);
+        }
+
+        bookRepository.deleteById(bookId);
+    }
+
+
+}

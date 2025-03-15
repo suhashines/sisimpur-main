@@ -33,4 +33,18 @@ public class BookController {
         Book savedBook = bookService.createBook(bookData);
         return ResponseEntity.ok(savedBook);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Book> updateBook(@PathVariable Long id, @RequestBody Map<String, Object> bookData) {
+        Book updatedBook = bookService.updateBook(id, bookData);
+        return ResponseEntity.ok(updatedBook);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteBook(@PathVariable Long id) {
+        bookService.deleteBook(id);
+        return ResponseEntity.ok("Book deleted successfully.");
+    }
+
+
 }
