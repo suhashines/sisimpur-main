@@ -1,0 +1,19 @@
+meta {
+  name: filter-books
+  type: http
+  seq: 6
+}
+
+get {
+  url: http://localhost:8080/api/v1/books/search
+  body: none
+  auth: none
+}
+
+params:query {
+  author: "martin"
+  title: "lord of the rings"
+  genre: "fantasy"
+  year: 1998
+  available: true
+}
