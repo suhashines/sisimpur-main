@@ -2,6 +2,7 @@ package com.sisimpur.library.service;
 
 import com.sisimpur.library.model.Author;
 import com.sisimpur.library.repository.AuthorRepository;
+import com.sisimpur.library.util.StringMatchingUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -11,9 +12,7 @@ import com.sisimpur.library.repository.BookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +20,8 @@ public class BookService {
     
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
+
+    private final static int SEARCH_TOLERANCE = 5 ;
 
     public Book getBook(Long id) {
         return bookRepository.findById(id).orElse(null);
@@ -146,6 +147,126 @@ public class BookService {
 
         bookRepository.deleteById(bookId);
     }
+
+
+    public List<Book> getBooksByAuthor(String authorName) {
+        if (authorName == null || authorName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Author name cannot be empty");
+        }
+
+        List<Author> allAuthors = authorRepository.findAll();
+
+        // If no authors exist, return empty list
+        if (allAuthors.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+
+        List<Book> matchingBooks = new ArrayList<>();
+
+        for (Author author : allAuthors) {
+            double score = StringMatchingUtil.calculateCombinedScore(authorName, author.getName());
+
+            if (score > 0.5) {
+                List<Book> booksByAuthor = bookRepository.findByAuthor(author);
+                matchingBooks.addAll(booksByAuthor);
+            }
+        }
+
+        if (matchingBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return matchingBooks;
+    }
+
+    public List<Book> getBooksByTitle(String bookTitle) {
+        if (bookTitle == null || bookTitle.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title cannot be empty");
+        }
+
+        List<Book> allBooks = bookRepository.findAll();
+
+
+        if (allBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Book> matchingBooks = new ArrayList<>();
+
+        for (Book book : allBooks) {
+            double score = StringMatchingUtil.calculateCombinedScore(bookTitle, book.getTitle());
+
+            if (score > 0.5) {
+                matchingBooks.add(book);
+            }
+        }
+
+        // If no matching books found, return empty response
+        if (matchingBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return matchingBooks;
+    }
+
+    public List<Book> getBooksByGenre(String genreQuery) {
+
+        if (genreQuery == null || genreQuery.trim().isEmpty()) {
+            throw new IllegalArgumentException("Genre cannot be empty");
+        }
+
+        // fetching all books
+        List<Book> allBooks = bookRepository.findAll();
+
+        if (allBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Book> bestMatches = new ArrayList<>();
+        double highestScore = 0.0;
+
+        for (Book book : allBooks) {
+            String genre = book.getGenre();
+            if (genre == null || genre.trim().isEmpty()) {
+                continue;
+            }
+
+            double score = StringMatchingUtil.calculateCombinedScore(genreQuery, genre);
+
+
+            if (score > highestScore) {
+                highestScore = score;
+                bestMatches.clear();
+                bestMatches.add(book);
+            }
+            else if (score == highestScore) {
+                bestMatches.add(book);
+            }
+        }
+
+        return bestMatches;
+    }
+
+
+    public List<Book> getBooksByPublishedYear(int year) {
+        List<Book> books = bookRepository.findByPublishedYear(year);
+        if (books.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No books found for the given published year.");
+        }
+        return books;
+    }
+
+    public List<Book> getAvailableBooks() {
+        List<Book> books = bookRepository.findByUserIsNull();
+        if (books.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No available books found.");
+        }
+        return books;
+    }
+
+
+
 
 
 }

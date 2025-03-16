@@ -1,5 +1,6 @@
 package com.sisimpur.library.service;
 
+import com.sisimpur.library.model.Author;
 import com.sisimpur.library.model.Book;
 import com.sisimpur.library.model.User;
 import com.sisimpur.library.repository.BookRepository;
@@ -40,16 +41,16 @@ public class CirculationService {
             return response;
         }
 
-        // Check if any book is already borrowed
+        // if any book is already borrowed
         for (Book book : books) {
             if (book.getUser() != null) {
                 response.put("success", false);
                 response.put("message", "Some books are already borrowed. Borrowing failed.");
-                return response; // Reject the entire request
+                return response; // entire request is rejected
             }
         }
 
-        // If all books are available, borrow them
+        // If all books are available, we can borrow them
         for (Book book : books) {
             book.setUser(userOptional.get());
         }
@@ -64,7 +65,7 @@ public class CirculationService {
     public Map<String, Object> returnBooks(Long userId, List<Long> bookIds) {
         Map<String, Object> response = new HashMap<>();
 
-        // Check if user exists
+        //if user exists
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isEmpty()) {
             response.put("success", false);
@@ -91,7 +92,7 @@ public class CirculationService {
             return response;
         }
 
-        // Save the returned books
+        // saving the returned books
         bookRepository.saveAll(books);
 
         response.put("success", true);
@@ -101,4 +102,5 @@ public class CirculationService {
 
         return response;
     }
+
 }

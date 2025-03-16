@@ -46,5 +46,24 @@ public class BookController {
         return ResponseEntity.ok("Book deleted successfully.");
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<?> searchBooksByAuthor(@RequestParam int author) {
+
+//        List<Book> books = bookService.getBooksByAuthor(author);
+//        List<Book> books = bookService.getBooksByTitle(author);
+          System.out.println("got author "+author);
+//          List<Book> books = bookService.getBooksByGenre(author);
+//        List<Book> books = bookService.getBooksByPublishedYear(author);
+          List<Book> books = bookService.getAvailableBooks();
+
+        // if no books found,a suitable message is returned
+        if (books.isEmpty()) {
+            return ResponseEntity.status(404).body("No books found by this author.");
+        }
+
+        // returning the books list
+        return ResponseEntity.ok(books);
+    }
+
 
 }
