@@ -25,7 +25,7 @@ Follow this guide to install docker in your system: [https://github.com/WCSCours
 
 ### Setting up the Database
 
-There is a `init.sql` file in the `db` folder. If you want to add more tables or columns or want to add predefined data, you can do it there. Alternatively, you can set up flyway database migration if you want, but it is not required.
+There is a `init.sql` file in the `db` folder. If you want to add more tables or columns or want to add predefined data, you can do it there. For incremental change in the schema flyway database can be used.
 
 Notice that there is a `docker-compose.yaml` file present in the root directory. Run `docker compose up` command in the root directory. 
 
