@@ -80,7 +80,6 @@ public class AuthorService {
         author.setBio(biography);
         Author savedAuthor = authorRepository.save(author);
 
-        // Handle books
         List<Map<String, Object>> booksData = (List<Map<String, Object>>) authorData.get("books");
         List<Book> books = new ArrayList<>();
 
@@ -93,12 +92,12 @@ public class AuthorService {
                     throw new IllegalArgumentException("Book title cannot be empty.");
                 }
 
-                // Handle genre (if empty, set as null)
+                //genre (if empty, set as null)
                 String genre = bookMap.containsKey("genre") && !((String) bookMap.get("genre")).trim().isEmpty()
                         ? (String) bookMap.get("genre")
                         : null;
 
-                // Handle published_year (if empty, set as 0)
+                // published_year (if empty, set as 0)
                 int publishedYear = 0;
                 if (bookMap.containsKey("published_year")) {
                     Object publishedYearObj = bookMap.get("published_year");
@@ -113,7 +112,7 @@ public class AuthorService {
                     }
                 }
 
-                // Create and save book
+
                 Book book = new Book();
                 book.setTitle(title);
                 book.setGenre(genre); // Nullable

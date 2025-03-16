@@ -27,25 +27,19 @@ public class StringMatchingUtil {
     }
 
     private static String cleanString(String input) {
-        // Trim leading and trailing whitespace
+
         input = input.trim();
-
-        // Remove all non-alphanumeric characters (including spaces)
         input = input.replaceAll("[^a-zA-Z0-9]", "");
-
-        // Convert to lowercase for case-insensitive comparison
         return input.toLowerCase();
     }
 
 
 
     private static double getSubstringScore(String query, String target) {
-        // If the query is a substring of the target, return a high score
         return target.contains(query) ? 1.0 : 0.0;
     }
 
     private static double getEditDistanceScore(String query, String target) {
-        // Calculate the edit distance between query and target using dynamic programming
         int distance = editDistance(query, target);
         int maxLength = Math.max(query.length(), target.length());
         return maxLength == 0 ? 0.0 : 1.0 - (double) distance / maxLength;

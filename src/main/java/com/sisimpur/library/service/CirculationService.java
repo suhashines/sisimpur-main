@@ -23,7 +23,7 @@ public class CirculationService {
     public Map<String, Object> borrowBooks(Long userId, List<Long> bookIds) {
         Map<String, Object> response = new HashMap<>();
 
-        // Check if user exists
+        //  if user exists
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isEmpty()) {
             response.put("success", false);
@@ -31,10 +31,10 @@ public class CirculationService {
             return response;
         }
 
-        // Fetch books from database
+        // fetching books from database
         List<Book> books = bookRepository.findAllById(bookIds);
 
-        // Check if all requested books exist
+        // if all requested books exist
         if (books.size() != bookIds.size()) {
             response.put("success", false);
             response.put("message", "Some books do not exist. Borrowing failed.");

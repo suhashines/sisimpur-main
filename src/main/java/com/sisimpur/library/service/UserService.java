@@ -63,7 +63,7 @@ public class UserService {
                 }
                 existingUser.setEmail(email);
             } else {
-                existingUser.setEmail(null); // Normalize empty string to null
+                existingUser.setEmail(null); // empty string normalized to null
             }
         }
 
