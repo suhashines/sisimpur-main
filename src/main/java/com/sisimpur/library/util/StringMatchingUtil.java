@@ -21,7 +21,7 @@ public class StringMatchingUtil {
 
         // Combined score: an weighted average of substring score and edit distance score
         //substring is given more priority as it is semantically more meaningful
-        double score = 0.7*substringScore + 0.3*editDistanceScore ;
+        double score = 0.5*substringScore + 0.5*editDistanceScore ;
         System.out.println("final score "+score);
         return score;
     }

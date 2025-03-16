@@ -46,23 +46,40 @@ public class BookController {
         return ResponseEntity.ok("Book deleted successfully.");
     }
 
+//    @GetMapping("/search")
+//    public ResponseEntity<?> searchBooksByAuthor(@RequestParam int author) {
+//
+////        List<Book> books = bookService.getBooksByAuthor(author);
+////        List<Book> books = bookService.getBooksByTitle(author);
+//          System.out.println("got author "+author);
+////          List<Book> books = bookService.getBooksByGenre(author);
+////        List<Book> books = bookService.getBooksByPublishedYear(author);
+//          List<Book> books = bookService.getAvailableBooks();
+//
+//        // if no books found,a suitable message is returned
+//        if (books.isEmpty()) {
+//            return ResponseEntity.status(404).body("No books found by this author.");
+//        }
+//
+//        // returning the books list
+//        return ResponseEntity.ok(books);
+//    }
+
     @GetMapping("/search")
-    public ResponseEntity<?> searchBooksByAuthor(@RequestParam int author) {
+    public ResponseEntity<List<Book>> filterBooks(
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Boolean available) {
 
-//        List<Book> books = bookService.getBooksByAuthor(author);
-//        List<Book> books = bookService.getBooksByTitle(author);
-          System.out.println("got author "+author);
-//          List<Book> books = bookService.getBooksByGenre(author);
-//        List<Book> books = bookService.getBooksByPublishedYear(author);
-          List<Book> books = bookService.getAvailableBooks();
+        List<Book> filteredBooks = bookService.filterBooks(author, title, genre, year, available);
 
-        // if no books found,a suitable message is returned
-        if (books.isEmpty()) {
-            return ResponseEntity.status(404).body("No books found by this author.");
+        if (filteredBooks.isEmpty()) {
+            return ResponseEntity.noContent().build(); // 204 if no books match
         }
 
-        // returning the books list
-        return ResponseEntity.ok(books);
+        return ResponseEntity.ok(filteredBooks); // 200 OK
     }
 
 

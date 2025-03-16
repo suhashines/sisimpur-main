@@ -21,7 +21,7 @@ public class BookService {
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
 
-    private final static int SEARCH_TOLERANCE = 5 ;
+    private final static double SEARCH_TOLERANCE = 0.12 ;
 
     public Book getBook(Long id) {
         return bookRepository.findById(id).orElse(null);
@@ -167,7 +167,7 @@ public class BookService {
         for (Author author : allAuthors) {
             double score = StringMatchingUtil.calculateCombinedScore(authorName, author.getName());
 
-            if (score > 0.5) {
+            if (score > SEARCH_TOLERANCE) {
                 List<Book> booksByAuthor = bookRepository.findByAuthor(author);
                 matchingBooks.addAll(booksByAuthor);
             }
@@ -197,7 +197,7 @@ public class BookService {
         for (Book book : allBooks) {
             double score = StringMatchingUtil.calculateCombinedScore(bookTitle, book.getTitle());
 
-            if (score > 0.5) {
+            if (score > SEARCH_TOLERANCE) {
                 matchingBooks.add(book);
             }
         }
@@ -265,6 +265,44 @@ public class BookService {
         return books;
     }
 
+
+    // let's combine these queries
+
+    public List<Book> filterBooks(String author, String title, String genre, Integer publishedYear, Boolean available) {
+
+        Set<Book> resultSet = null;
+
+        if (author != null && !author.isEmpty()) {
+            resultSet = new HashSet<>(getBooksByAuthor(author));
+        }
+
+        if (title != null && !title.isEmpty()) {
+            Set<Book> titleMatches = new HashSet<>(getBooksByTitle(title));
+            resultSet = (resultSet == null) ? titleMatches : intersection(resultSet, titleMatches);
+        }
+
+        if (genre != null && !genre.isEmpty()) {
+            Set<Book> genreMatches = new HashSet<>(getBooksByGenre(genre));
+            resultSet = (resultSet == null) ? genreMatches : intersection(resultSet, genreMatches);
+        }
+
+        if (publishedYear != null) {
+            Set<Book> yearMatches = new HashSet<>(getBooksByPublishedYear(publishedYear));
+            resultSet = (resultSet == null) ? yearMatches : intersection(resultSet, yearMatches);
+        }
+
+        if (available != null && available) {
+            Set<Book> availabilityMatches = new HashSet<>(getAvailableBooks());
+            resultSet = (resultSet == null) ? availabilityMatches : intersection(resultSet, availabilityMatches);
+        }
+
+        return (resultSet == null) ? Collections.emptyList() : new ArrayList<>(resultSet);
+    }
+
+    private Set<Book> intersection(Set<Book> set1, Set<Book> set2) {
+        set1.retainAll(set2);
+        return set1;
+    }
 
 
 
