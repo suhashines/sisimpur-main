@@ -14,38 +14,9 @@ params:path {
   id: 1
 }
 
-valid requests: returns the updated user with success code
-
 body:json {
   {
     "name" : "Suhas",
     "email": "suhasabdullah43@gmail.com"
   }
 }
-
-body:json {
-  {
-    "name" : "Suhas",
-    "email": ""
-  }
-}
-
-body:json {
-  {
-    "name" : "Suhas"
-  }
-}
-
-body:json {
-  {
-    "email" : "example@gmail.com"
-  }
-}
-
-invalid requests: shows appropriate error response
-
-{
-    "email":"example@gmail.com"
-}
-
-user with this email already exists
