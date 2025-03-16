@@ -31,4 +31,8 @@ public class Book {
     @ManyToOne
     @JoinColumn(name = "author_id", nullable = false)  // Foreign key reference
     private Author author;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = true)
+    private User user;
 }

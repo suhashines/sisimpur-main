@@ -40,3 +40,10 @@ INSERT INTO books (title, author_id, published_year) VALUES
 ('A Game of Thrones', 2, 1996),
 ('A Clash of Kings', 2, 1998);
 
+-- user_id column with NULL as default (no user assigned)
+ALTER TABLE books ADD COLUMN user_id INT DEFAULT NULL;
+
+-- foreign key constraint referencing users(id)
+ALTER TABLE books ADD CONSTRAINT fk_books_users
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+

@@ -69,4 +69,15 @@ public class UserService {
 
         return userRepository.save(existingUser);
     }
+
+    public void deleteUser(Long id) {
+
+        Optional<User> existingUser = userRepository.findById(id);
+
+        if(existingUser.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User not found with ID "+id);
+
+        }
+        userRepository.deleteById(id);
+    }
 }
