@@ -38,3 +38,5 @@ The project is setup with the database connection configured. Run `./gradlew boo
 ### Testing the Endpoints
 
 The API documentation is provided as bruno files in the `bruno` folder in root. Install Bruno from [https://www.usebruno.com/downloads](https://www.usebruno.com/downloads). From Bruno chose `collection > open collection` and chose the bruno folder in the project root. Alternatively, you can use the bruno extension from VS Code. 
+
+![Project Demonstration](https://youtu.be/_2Vj7nltEhE)
