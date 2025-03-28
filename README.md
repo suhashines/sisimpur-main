@@ -1,4 +1,4 @@
-# **Library Management API - Setup Guide** 📚
+# **Library Management API - The project that earned the internship at PrideSys It** 📚
 
 Welcome to the **Library Management API**! This guide will help you **clone, set up, and run** the project smoothly on your **local machine**.  
 
