@@ -1,5 +1,6 @@
 package com.sisimpur.library.service;
 
+import com.sisimpur.library.dto.BookRequest;
 import com.sisimpur.library.model.Author;
 import com.sisimpur.library.repository.AuthorRepository;
 import com.sisimpur.library.util.StringMatchingUtil;
@@ -17,11 +18,11 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class BookService {
-    
+
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
 
-    private final static double SEARCH_TOLERANCE = 0.12 ;
+    private final static double SEARCH_TOLERANCE = 0.12;
 
     public Book getBook(Long id) {
         return bookRepository.findById(id).orElse(null);
@@ -32,66 +33,39 @@ public class BookService {
         return bookRepository.findAll();
     }
 
+    //refactored api
+    public Book createBook(BookRequest bookData) {
+    
+        // Fetch author
+        Long authorId = bookData.getAuthorId().longValue();
 
-    public Book createBook(Map<String, Object> bookData) {
-        try {
-            // Validate title (mandatory)
-            String title = (String) bookData.get("title");
-            if (title == null || title.trim().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book title cannot be empty.");
-            }
+        // System.out.println("author id:"+authorId);
+        Optional<Author> author = authorRepository.findById(authorId);
 
-            // Genre is optional (if empty string, store as null)
-            String genre = bookData.containsKey("genre") && !((String) bookData.get("genre")).trim().isEmpty()
-                    ? (String) bookData.get("genre")
-                    : null;
-
-            // Published year is optional (if empty string, set to 0)
-            int publishedYear = 0;
-            if (bookData.containsKey("published_year")) {
-                Object publishedYearObj = bookData.get("published_year");
-                if (publishedYearObj instanceof Number) {
-                    publishedYear = ((Number) publishedYearObj).intValue();
-                } else if (publishedYearObj instanceof String && !((String) publishedYearObj).trim().isEmpty()) {
-                    try {
-                        publishedYear = Integer.parseInt((String) publishedYearObj);
-                    } catch (NumberFormatException e) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Published year must be a valid integer.");
-                    }
-                }
-            }
-
-            // Validate author ID (mandatory)
-            if (!(bookData.get("author_id") instanceof Number)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Author ID must be a number.");
-            }
-            Long authorId = ((Number) bookData.get("author_id")).longValue();
-
-            // Fetch author
-            Optional<Author> author = authorRepository.findById(authorId);
-            if (author.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
-            }
-
-            // Create and save book
-            Book book = new Book();
-            book.setTitle(title);
-            book.setGenre(genre);  // Stores null if empty string
-            book.setPublishedYear(publishedYear);  // Defaults to 0 if empty
-            book.setAuthor(author.get());
-
-            return bookRepository.save(book);
-
-        } catch (ClassCastException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid data type provided.");
-        } catch (ResponseStatusException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        if (author.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
         }
+
+        // Prepare Book entity
+        Book book = new Book();
+        book.setTitle(bookData.getTitle().trim());
+
+        // Set genre only if not blank
+        String genre = bookData.getGenre();
+        if (genre != null && !genre.trim().isEmpty()) {
+            book.setGenre(genre.trim());
+        } else {
+            book.setGenre(null);
+        }
+
+        // Set publishedYear (default to 0 if null)
+        book.setPublishedYear(bookData.getPublishedYear() != null ? bookData.getPublishedYear() : 0);
+
+        // Associate author
+        book.setAuthor(author.get());
+
+        return bookRepository.save(book);
     }
-
-
 
     public Book updateBook(Long bookId, Map<String, Object> bookData) {
 
@@ -148,7 +122,6 @@ public class BookService {
         bookRepository.deleteById(bookId);
     }
 
-
     public List<Book> getBooksByAuthor(String authorName) {
         if (authorName == null || authorName.trim().isEmpty()) {
             throw new IllegalArgumentException("Author name cannot be empty");
@@ -160,7 +133,6 @@ public class BookService {
         if (allAuthors.isEmpty()) {
             return Collections.emptyList();
         }
-
 
         List<Book> matchingBooks = new ArrayList<>();
 
@@ -186,7 +158,6 @@ public class BookService {
         }
 
         List<Book> allBooks = bookRepository.findAll();
-
 
         if (allBooks.isEmpty()) {
             return Collections.emptyList();
@@ -234,20 +205,17 @@ public class BookService {
 
             double score = StringMatchingUtil.calculateCombinedScore(genreQuery, genre);
 
-
             if (score > highestScore) {
                 highestScore = score;
                 bestMatches.clear();
                 bestMatches.add(book);
-            }
-            else if (score == highestScore) {
+            } else if (score == highestScore) {
                 bestMatches.add(book);
             }
         }
 
         return bestMatches;
     }
-
 
     public List<Book> getBooksByPublishedYear(int year) {
         List<Book> books = bookRepository.findByPublishedYear(year);
@@ -264,7 +232,6 @@ public class BookService {
         }
         return books;
     }
-
 
     // let's combine these queries
 
@@ -303,8 +270,5 @@ public class BookService {
         set1.retainAll(set2);
         return set1;
     }
-
-
-
 
 }

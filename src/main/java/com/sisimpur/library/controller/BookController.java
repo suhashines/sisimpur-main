@@ -3,9 +3,11 @@ package com.sisimpur.library.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.sisimpur.library.dto.BookRequest;
 import com.sisimpur.library.model.Book;
 import com.sisimpur.library.service.BookService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -29,8 +31,10 @@ public class BookController {
     }
 
     @PostMapping
-    public ResponseEntity<Book> createBook(@RequestBody Map<String, Object> bookData) {
-        Book savedBook = bookService.createBook(bookData);
+    public ResponseEntity<Book> createBook(@Valid @RequestBody BookRequest bookDto) {
+
+        Book savedBook = bookService.createBook(bookDto);
+
         return ResponseEntity.ok(savedBook);
     }
 

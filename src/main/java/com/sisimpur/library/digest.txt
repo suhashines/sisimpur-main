@@ -1,0 +1,1233 @@
+Directory structure:
+└── library/
+    ├── LibraryApplication.java
+    ├── controller/
+    │   ├── AuthorController.java
+    │   ├── BookController.java
+    │   ├── CirculationController.java
+    │   ├── HealthController.java
+    │   └── UserController.java
+    ├── model/
+    │   ├── Author.java
+    │   ├── Book.java
+    │   └── User.java
+    ├── repository/
+    │   ├── AuthorRepository.java
+    │   ├── BookRepository.java
+    │   └── UserRepository.java
+    ├── service/
+    │   ├── AuthorService.java
+    │   ├── BookService.java
+    │   ├── CirculationService.java
+    │   └── UserService.java
+    └── util/
+        └── StringMatchingUtil.java
+
+================================================
+File: LibraryApplication.java
+================================================
+package com.sisimpur.library;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+
+@SpringBootApplication
+@EnableJpaRepositories("com.sisimpur.library.repository")  // <- Add this
+public class LibraryApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(LibraryApplication.class, args);
+	}
+
+}
+
+
+
+================================================
+File: controller/AuthorController.java
+================================================
+package com.sisimpur.library.controller;
+
+import com.sisimpur.library.model.Author;
+import com.sisimpur.library.model.Book;
+import com.sisimpur.library.repository.AuthorRepository;
+import com.sisimpur.library.service.AuthorService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/v1/authors")
+@RequiredArgsConstructor
+
+public class AuthorController {
+
+    private final AuthorService authorService;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Author> getAuthorById(@PathVariable Long id) {
+        Author author = authorService.getAuthorById(id);
+        if (author == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(author);
+    }
+
+    @GetMapping
+    public List<Author> getAllAuthors() {
+        return authorService.getAllAuthors();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAuthor(@PathVariable Long id, @RequestBody Map<String, String> authorData) {
+        try {
+            Author updatedAuthor = authorService.updateAuthor(id, authorData);
+            return ResponseEntity.ok(updatedAuthor);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createAuthor(@RequestBody Map<String, Object> authorData) {
+        try {
+            Author createdAuthor = authorService.createAuthor(authorData);
+            return ResponseEntity.ok(createdAuthor);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Something went wrong!"));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteAuthor(@PathVariable Long id) {
+        authorService.deleteAuthorById(id);
+        return ResponseEntity.ok("Author deleted successfully.");
+    }
+
+}
+
+
+
+================================================
+File: controller/BookController.java
+================================================
+package com.sisimpur.library.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.sisimpur.library.model.Book;
+import com.sisimpur.library.service.BookService;
+
+import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/books")
+@RequiredArgsConstructor
+public class BookController {
+    
+    private final BookService bookService;
+
+    @GetMapping("/{id}")
+    public Book getBook(@PathVariable Long id) {
+        return bookService.getBook(id);
+    }
+
+    @GetMapping
+    public List<Book> getAllBooks() {
+        return bookService.getAllBooks();
+    }
+
+    @PostMapping
+    public ResponseEntity<Book> createBook(@RequestBody Map<String, Object> bookData) {
+        Book savedBook = bookService.createBook(bookData);
+        return ResponseEntity.ok(savedBook);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Book> updateBook(@PathVariable Long id, @RequestBody Map<String, Object> bookData) {
+        Book updatedBook = bookService.updateBook(id, bookData);
+        return ResponseEntity.ok(updatedBook);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteBook(@PathVariable Long id) {
+        bookService.deleteBook(id);
+        return ResponseEntity.ok("Book deleted successfully.");
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Book>> filterBooks(
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Boolean available) {
+
+        List<Book> filteredBooks = bookService.filterBooks(author, title, genre, year, available);
+
+        if (filteredBooks.isEmpty()) {
+            return ResponseEntity.noContent().build(); // 204 if no books match
+        }
+
+        return ResponseEntity.ok(filteredBooks); // 200 OK
+    }
+
+
+}
+
+
+
+================================================
+File: controller/CirculationController.java
+================================================
+package com.sisimpur.library.controller;
+
+import com.sisimpur.library.service.CirculationService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("api/v1/circulation")
+@RequiredArgsConstructor
+
+public class CirculationController {
+
+    private final CirculationService circulationService;
+
+    @PostMapping("/borrow")
+    public ResponseEntity<Map<String, Object>> borrowBooks(@RequestBody Map<String, Object> request) {
+        try {
+            Long userId = ((Number) request.get("user_id")).longValue();
+            List<Integer> bookIdsInt = (List<Integer>) request.get("book_ids");
+
+            // Convert List<Integer> to List<Long>
+            List<Long> bookIds = bookIdsInt.stream().map(Integer::longValue).toList();
+
+            Map<String, Object> response = circulationService.borrowBooks(userId, bookIds);
+
+            if (!(boolean) response.get("success")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("success", false, "message", "Invalid request format"));
+        }
+    }
+
+    @PostMapping("/return")
+    public ResponseEntity<Map<String, Object>> returnBooks(@RequestBody Map<String, Object> request) {
+        Long userId = Long.valueOf(request.get("user_id").toString());
+        List<Long> bookIds = ((List<Integer>) request.get("book_ids")).stream()
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = circulationService.returnBooks(userId, bookIds);
+
+        if (!(boolean) response.get("success")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+}
+
+
+
+================================================
+File: controller/HealthController.java
+================================================
+package com.sisimpur.library.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/health")
+public class HealthController {
+
+    @GetMapping
+    public String healthCheck() {
+        return "I am healthy";
+    }
+}
+
+
+
+================================================
+File: controller/UserController.java
+================================================
+package com.sisimpur.library.controller;
+
+import com.sisimpur.library.model.User;
+import com.sisimpur.library.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/users")
+@RequiredArgsConstructor
+public class UserController {
+    private final UserService userService;
+
+    @GetMapping("{id}")
+    public User getUser(@PathVariable Long id){
+        return userService.getUser(id);
+    }
+
+    @GetMapping
+    public List<User> getAllUsers(){
+        return userService.getAllUsers();
+    }
+
+    @PostMapping
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        User createdUser = userService.createUser(user);
+        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+        User updatedUser = userService.updateUser(id, user);
+        return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.ok("User deleted successfully.");
+    }
+}
+
+
+
+================================================
+File: model/Author.java
+================================================
+package com.sisimpur.library.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Setter
+@Getter
+@Entity
+@Table(name = "authors")
+@NoArgsConstructor
+@AllArgsConstructor
+public class Author {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", length = 100)
+    private String name;
+
+    @Column(name = "bio", columnDefinition = "TEXT")
+    private String bio;
+}
+
+
+
+
+================================================
+File: model/Book.java
+================================================
+package com.sisimpur.library.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Setter
+@Getter
+@Entity
+@Table(name = "books")
+@NoArgsConstructor
+@AllArgsConstructor
+public class Book {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "title", length = 255)
+    private String title;
+
+    @Column(name = "genre", length = 100)
+    private String genre;
+
+    @Column(name = "published_year")
+    private int publishedYear;
+
+    // Add more fields as needed
+    @ManyToOne
+    @JoinColumn(name = "author_id", nullable = false)  // Foreign key reference
+    private Author author;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = true)
+    private User user;
+}
+
+
+
+================================================
+File: model/User.java
+================================================
+package com.sisimpur.library.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Setter
+@Getter
+@Entity
+@Table(name = "users")
+@NoArgsConstructor
+@AllArgsConstructor
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", length = 100, nullable = false)
+    private String name;
+
+    @Column(name = "email", length = 100, nullable = false, unique = true)
+    private String email;
+}
+
+
+
+
+================================================
+File: repository/AuthorRepository.java
+================================================
+package com.sisimpur.library.repository;
+
+import com.sisimpur.library.model.Author;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface AuthorRepository extends JpaRepository<Author, Long> {
+}
+
+
+
+
+================================================
+File: repository/BookRepository.java
+================================================
+package com.sisimpur.library.repository;
+
+import com.sisimpur.library.model.Author;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.sisimpur.library.model.Book;
+
+import java.util.List;
+
+
+public interface BookRepository extends JpaRepository<Book, Long> {
+    public List<Book> findByAuthor(Author author);
+    List<Book> findByPublishedYear(int publishedYear);
+    List<Book> findByUserIsNull();
+}
+
+
+================================================
+File: repository/UserRepository.java
+================================================
+package com.sisimpur.library.repository;
+
+import com.sisimpur.library.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface UserRepository extends JpaRepository<User,Long> {
+
+    Optional<User> findByEmail(String email);
+}
+
+
+
+================================================
+File: service/AuthorService.java
+================================================
+package com.sisimpur.library.service;
+
+import com.sisimpur.library.model.Author;
+import com.sisimpur.library.model.Book;
+import com.sisimpur.library.repository.AuthorRepository;
+import com.sisimpur.library.repository.BookRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+
+public class AuthorService {
+
+    private final AuthorRepository authorRepository;
+    private final BookRepository bookRepository;
+
+    public Author getAuthorById(Long id){
+        return authorRepository.findById(id).orElse(null);
+    }
+
+    public List<Author> getAllAuthors() {
+        return authorRepository.findAll();
+    }
+
+    public Author updateAuthor(Long id, Map<String, String> authorData) {
+        Optional<Author> optionalAuthor = authorRepository.findById(id);
+        if (optionalAuthor.isEmpty()) {
+            throw new RuntimeException("Author not found with ID: " + id);
+        }
+
+        Author author = optionalAuthor.get();
+
+        // Validate and update fields
+        if (authorData.containsKey("name")) {
+            String name = authorData.get("name").trim();
+            if (name.isEmpty()) {
+                throw new IllegalArgumentException("Name cannot be empty.");
+            }
+            author.setName(name);
+        }
+
+        if (authorData.containsKey("biography")) {
+            String bio = authorData.get("biography").trim();
+            if (bio.isEmpty()) {
+                throw new IllegalArgumentException("Biography cannot be empty.");
+            }
+            author.setBio(bio);
+        }
+
+        return authorRepository.save(author);
+    }
+
+    public Author createAuthor(Map<String, Object> authorData) {
+        String name = (String) authorData.get("name");
+
+        System.out.println("got author name " + name);
+
+        // Author name is mandatory
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Author name cannot be empty.");
+        }
+
+        // Bio is optional
+        String biography = (String) authorData.getOrDefault("biography", "");
+
+        // Create and save the Author
+        Author author = new Author();
+        author.setName(name);
+        author.setBio(biography);
+        Author savedAuthor = authorRepository.save(author);
+
+        List<Map<String, Object>> booksData = (List<Map<String, Object>>) authorData.get("books");
+        List<Book> books = new ArrayList<>();
+
+        if (booksData != null) {
+            for (Map<String, Object> bookMap : booksData) {
+                String title = (String) bookMap.get("title");
+
+                // Book must have a title
+                if (title == null || title.trim().isEmpty()) {
+                    throw new IllegalArgumentException("Book title cannot be empty.");
+                }
+
+                //genre (if empty, set as null)
+                String genre = bookMap.containsKey("genre") && !((String) bookMap.get("genre")).trim().isEmpty()
+                        ? (String) bookMap.get("genre")
+                        : null;
+
+                // published_year (if empty, set as 0)
+                int publishedYear = 0;
+                if (bookMap.containsKey("published_year")) {
+                    Object publishedYearObj = bookMap.get("published_year");
+                    if (publishedYearObj instanceof Number) {
+                        publishedYear = ((Number) publishedYearObj).intValue();
+                    } else if (publishedYearObj instanceof String && !((String) publishedYearObj).trim().isEmpty()) {
+                        try {
+                            publishedYear = Integer.parseInt((String) publishedYearObj);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Published year must be a valid integer.");
+                        }
+                    }
+                }
+
+
+                Book book = new Book();
+                book.setTitle(title);
+                book.setGenre(genre); // Nullable
+                book.setPublishedYear(publishedYear); // Defaults to 0 if empty
+                book.setAuthor(savedAuthor);
+                books.add(book);
+            }
+        }
+
+        // Save all books if any
+        if (!books.isEmpty()) {
+            bookRepository.saveAll(books);
+        }
+
+        return savedAuthor;
+    }
+
+    public void deleteAuthorById(Long id) {
+        Optional<Author> existingAuthor = authorRepository.findById(id);
+
+        if (existingAuthor.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + id);
+        }
+
+        // Delete the author (Cascade delete will remove books)
+        authorRepository.deleteById(id);
+    }
+
+}
+
+
+
+================================================
+File: service/BookService.java
+================================================
+package com.sisimpur.library.service;
+
+import com.sisimpur.library.model.Author;
+import com.sisimpur.library.repository.AuthorRepository;
+import com.sisimpur.library.util.StringMatchingUtil;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
+import com.sisimpur.library.model.Book;
+import com.sisimpur.library.repository.BookRepository;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class BookService {
+    
+    private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
+
+    private final static double SEARCH_TOLERANCE = 0.12 ;
+
+    public Book getBook(Long id) {
+        return bookRepository.findById(id).orElse(null);
+
+    }
+
+    public List<Book> getAllBooks() {
+        return bookRepository.findAll();
+    }
+
+
+    public Book createBook(Map<String, Object> bookData) {
+        try {
+            // Validate title (mandatory)
+            String title = (String) bookData.get("title");
+            if (title == null || title.trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book title cannot be empty.");
+            }
+
+            // Genre is optional (if empty string, store as null)
+            String genre = bookData.containsKey("genre") && !((String) bookData.get("genre")).trim().isEmpty()
+                    ? (String) bookData.get("genre")
+                    : null;
+
+            // Published year is optional (if empty string, set to 0)
+            int publishedYear = 0;
+            if (bookData.containsKey("published_year")) {
+                Object publishedYearObj = bookData.get("published_year");
+                if (publishedYearObj instanceof Number) {
+                    publishedYear = ((Number) publishedYearObj).intValue();
+                } else if (publishedYearObj instanceof String && !((String) publishedYearObj).trim().isEmpty()) {
+                    try {
+                        publishedYear = Integer.parseInt((String) publishedYearObj);
+                    } catch (NumberFormatException e) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Published year must be a valid integer.");
+                    }
+                }
+            }
+
+            // Validate author ID (mandatory)
+            if (!(bookData.get("author_id") instanceof Number)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Author ID must be a number.");
+            }
+            Long authorId = ((Number) bookData.get("author_id")).longValue();
+
+            // Fetch author
+            Optional<Author> author = authorRepository.findById(authorId);
+            if (author.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
+            }
+
+            // Create and save book
+            Book book = new Book();
+            book.setTitle(title);
+            book.setGenre(genre);  // Stores null if empty string
+            book.setPublishedYear(publishedYear);  // Defaults to 0 if empty
+            book.setAuthor(author.get());
+
+            return bookRepository.save(book);
+
+        } catch (ClassCastException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid data type provided.");
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        }
+    }
+
+
+
+    public Book updateBook(Long bookId, Map<String, Object> bookData) {
+
+        Optional<Book> existingBook = bookRepository.findById(bookId);
+        if (existingBook.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with ID: " + bookId);
+        }
+
+        Book book = existingBook.get();
+
+        try {
+            if (bookData.containsKey("title")) {
+                book.setTitle((String) bookData.get("title"));
+            }
+
+            if (bookData.containsKey("genre")) {
+                book.setGenre((String) bookData.get("genre"));
+            }
+
+            if (bookData.containsKey("published_year")) {
+                if (!(bookData.get("published_year") instanceof Number)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Published year must be an integer.");
+                }
+                book.setPublishedYear(((Number) bookData.get("published_year")).intValue());
+            }
+
+            if (bookData.containsKey("author_id")) {
+                if (!(bookData.get("author_id") instanceof Number)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Author ID must be a number.");
+                }
+                Long authorId = ((Number) bookData.get("author_id")).longValue();
+                Optional<Author> author = authorRepository.findById(authorId);
+                if (author.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
+                }
+                book.setAuthor(author.get());
+            }
+
+            return bookRepository.save(book);
+
+        } catch (ClassCastException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid data type provided.");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        }
+    }
+
+    public void deleteBook(Long bookId) {
+        Optional<Book> existingBook = bookRepository.findById(bookId);
+        if (existingBook.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found with ID: " + bookId);
+        }
+
+        bookRepository.deleteById(bookId);
+    }
+
+
+    public List<Book> getBooksByAuthor(String authorName) {
+        if (authorName == null || authorName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Author name cannot be empty");
+        }
+
+        List<Author> allAuthors = authorRepository.findAll();
+
+        // If no authors exist, return empty list
+        if (allAuthors.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+
+        List<Book> matchingBooks = new ArrayList<>();
+
+        for (Author author : allAuthors) {
+            double score = StringMatchingUtil.calculateCombinedScore(authorName, author.getName());
+
+            if (score > SEARCH_TOLERANCE) {
+                List<Book> booksByAuthor = bookRepository.findByAuthor(author);
+                matchingBooks.addAll(booksByAuthor);
+            }
+        }
+
+        if (matchingBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return matchingBooks;
+    }
+
+    public List<Book> getBooksByTitle(String bookTitle) {
+        if (bookTitle == null || bookTitle.trim().isEmpty()) {
+            throw new IllegalArgumentException("Book title cannot be empty");
+        }
+
+        List<Book> allBooks = bookRepository.findAll();
+
+
+        if (allBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Book> matchingBooks = new ArrayList<>();
+
+        for (Book book : allBooks) {
+            double score = StringMatchingUtil.calculateCombinedScore(bookTitle, book.getTitle());
+
+            if (score > SEARCH_TOLERANCE) {
+                matchingBooks.add(book);
+            }
+        }
+
+        // If no matching books found, return empty response
+        if (matchingBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return matchingBooks;
+    }
+
+    public List<Book> getBooksByGenre(String genreQuery) {
+
+        if (genreQuery == null || genreQuery.trim().isEmpty()) {
+            throw new IllegalArgumentException("Genre cannot be empty");
+        }
+
+        // fetching all books
+        List<Book> allBooks = bookRepository.findAll();
+
+        if (allBooks.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Book> bestMatches = new ArrayList<>();
+        double highestScore = 0.0;
+
+        for (Book book : allBooks) {
+            String genre = book.getGenre();
+            if (genre == null || genre.trim().isEmpty()) {
+                continue;
+            }
+
+            double score = StringMatchingUtil.calculateCombinedScore(genreQuery, genre);
+
+
+            if (score > highestScore) {
+                highestScore = score;
+                bestMatches.clear();
+                bestMatches.add(book);
+            }
+            else if (score == highestScore) {
+                bestMatches.add(book);
+            }
+        }
+
+        return bestMatches;
+    }
+
+
+    public List<Book> getBooksByPublishedYear(int year) {
+        List<Book> books = bookRepository.findByPublishedYear(year);
+        if (books.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No books found for the given published year.");
+        }
+        return books;
+    }
+
+    public List<Book> getAvailableBooks() {
+        List<Book> books = bookRepository.findByUserIsNull();
+        if (books.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No available books found.");
+        }
+        return books;
+    }
+
+
+    // let's combine these queries
+
+    public List<Book> filterBooks(String author, String title, String genre, Integer publishedYear, Boolean available) {
+
+        Set<Book> resultSet = null;
+
+        if (author != null && !author.isEmpty()) {
+            resultSet = new HashSet<>(getBooksByAuthor(author));
+        }
+
+        if (title != null && !title.isEmpty()) {
+            Set<Book> titleMatches = new HashSet<>(getBooksByTitle(title));
+            resultSet = (resultSet == null) ? titleMatches : intersection(resultSet, titleMatches);
+        }
+
+        if (genre != null && !genre.isEmpty()) {
+            Set<Book> genreMatches = new HashSet<>(getBooksByGenre(genre));
+            resultSet = (resultSet == null) ? genreMatches : intersection(resultSet, genreMatches);
+        }
+
+        if (publishedYear != null) {
+            Set<Book> yearMatches = new HashSet<>(getBooksByPublishedYear(publishedYear));
+            resultSet = (resultSet == null) ? yearMatches : intersection(resultSet, yearMatches);
+        }
+
+        if (available != null && available) {
+            Set<Book> availabilityMatches = new HashSet<>(getAvailableBooks());
+            resultSet = (resultSet == null) ? availabilityMatches : intersection(resultSet, availabilityMatches);
+        }
+
+        return (resultSet == null) ? Collections.emptyList() : new ArrayList<>(resultSet);
+    }
+
+    private Set<Book> intersection(Set<Book> set1, Set<Book> set2) {
+        set1.retainAll(set2);
+        return set1;
+    }
+
+
+
+
+}
+
+
+
+================================================
+File: service/CirculationService.java
+================================================
+package com.sisimpur.library.service;
+
+import com.sisimpur.library.model.Author;
+import com.sisimpur.library.model.Book;
+import com.sisimpur.library.model.User;
+import com.sisimpur.library.repository.BookRepository;
+import com.sisimpur.library.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+
+public class CirculationService {
+
+    private final BookRepository bookRepository;
+    private final UserRepository userRepository;
+
+    public Map<String, Object> borrowBooks(Long userId, List<Long> bookIds) {
+        Map<String, Object> response = new HashMap<>();
+
+        //  if user exists
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "User not found.");
+            return response;
+        }
+
+        // fetching books from database
+        List<Book> books = bookRepository.findAllById(bookIds);
+
+        // if all requested books exist
+        if (books.size() != bookIds.size()) {
+            response.put("success", false);
+            response.put("message", "Some books do not exist. Borrowing failed.");
+            return response;
+        }
+
+        // if any book is already borrowed
+        for (Book book : books) {
+            if (book.getUser() != null) {
+                response.put("success", false);
+                response.put("message", "Some books are already borrowed. Borrowing failed.");
+                return response; // entire request is rejected
+            }
+        }
+
+        // If all books are available, we can borrow them
+        for (Book book : books) {
+            book.setUser(userOptional.get());
+        }
+        bookRepository.saveAll(books);
+
+        response.put("success", true);
+        response.put("message", "Books borrowed successfully.");
+        return response;
+    }
+
+
+    public Map<String, Object> returnBooks(Long userId, List<Long> bookIds) {
+        Map<String, Object> response = new HashMap<>();
+
+        //if user exists
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "User not found.");
+            return response;
+        }
+
+        List<Book> books = bookRepository.findAllById(bookIds);
+        List<Long> returnedBooks = new ArrayList<>();
+        List<Long> invalidBooks = new ArrayList<>();
+
+        for (Book book : books) {
+            if (book.getUser() != null && book.getUser().getId().equals(userId)) {
+                returnedBooks.add(book.getId());
+                book.setUser(null);
+            } else {
+                invalidBooks.add(book.getId());
+            }
+        }
+
+        if (returnedBooks.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "No books were returned. Either they are not borrowed or invalid.");
+            return response;
+        }
+
+        // saving the returned books
+        bookRepository.saveAll(books);
+
+        response.put("success", true);
+        response.put("message", "Books returned successfully.");
+        response.put("returned_books", returnedBooks);
+        response.put("invalid_books", invalidBooks);
+
+        return response;
+    }
+
+}
+
+
+
+================================================
+File: service/UserService.java
+================================================
+package com.sisimpur.library.service;
+
+import com.sisimpur.library.model.User;
+import com.sisimpur.library.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    public User getUser(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User createUser(User user) {
+        // Validate name
+        if (user.getName() == null || user.getName().trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User name cannot be empty.");
+        }
+
+        // Validate email (if provided)
+        if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
+            Optional<User> existingUser = userRepository.findByEmail(user.getEmail().trim());
+            if (existingUser.isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+            }
+        } else {
+            user.setEmail(null); // Normalize empty string to null
+        }
+
+        return userRepository.save(user);
+    }
+
+    public User updateUser(Long id, User updatedUser) {
+        // Find existing user
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with ID: " + id));
+
+        // Update name if provided and not empty
+        if (updatedUser.getName() != null && !updatedUser.getName().trim().isEmpty()) {
+            existingUser.setName(updatedUser.getName().trim());
+        }
+
+        // Update email if provided
+        if (updatedUser.getEmail() != null) {
+            String email = updatedUser.getEmail().trim();
+            if (!email.isEmpty()) {
+                // Check if email already exists for another user
+                Optional<User> existingEmailUser = userRepository.findByEmail(email);
+                if (existingEmailUser.isPresent() && !existingEmailUser.get().getId().equals(id)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use.");
+                }
+                existingUser.setEmail(email);
+            } else {
+                existingUser.setEmail(null); // empty string normalized to null
+            }
+        }
+
+        return userRepository.save(existingUser);
+    }
+
+    public void deleteUser(Long id) {
+
+        Optional<User> existingUser = userRepository.findById(id);
+
+        if(existingUser.isEmpty()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User not found with ID "+id);
+
+        }
+        userRepository.deleteById(id);
+    }
+}
+
+
+
+================================================
+File: util/StringMatchingUtil.java
+================================================
+package com.sisimpur.library.util;
+
+public class StringMatchingUtil {
+
+    // Combine substring match and edit distance into a final score
+    public static double calculateCombinedScore(String query, String target) {
+        // Clean the strings by removing non-alphabetic characters and trimming spaces
+        String cleanedQuery = cleanString(query);
+        String cleanedTarget = cleanString(target);
+
+        System.out.println("query "+cleanedQuery+" target: "+cleanedTarget);
+
+        // Substring score: check if cleaned query is a substring of cleaned target
+        double substringScore = getSubstringScore(cleanedQuery, cleanedTarget);
+
+        System.out.println("substring score: "+substringScore);
+        // Edit distance score
+        double editDistanceScore = getEditDistanceScore(query, target);
+
+        System.out.println("editDistance score "+editDistanceScore);
+
+        // Combined score: an weighted average of substring score and edit distance score
+        //substring is given more priority as it is semantically more meaningful
+        double score = 0.5*substringScore + 0.5*editDistanceScore ;
+        System.out.println("final score "+score);
+        return score;
+    }
+
+    private static String cleanString(String input) {
+
+        input = input.trim();
+        input = input.replaceAll("[^a-zA-Z0-9]", "");
+        return input.toLowerCase();
+    }
+
+
+
+    private static double getSubstringScore(String query, String target) {
+        return target.contains(query) ? 1.0 : 0.0;
+    }
+
+    private static double getEditDistanceScore(String query, String target) {
+        int distance = editDistance(query, target);
+        int maxLength = Math.max(query.length(), target.length());
+        return maxLength == 0 ? 0.0 : 1.0 - (double) distance / maxLength;
+    }
+
+    private static int editDistance(String str1, String str2) {
+        int m = str1.length();
+        int n = str2.length();
+        int[][] dp = new int[m + 1][n + 1];
+
+        for (int i = 0; i <= m; i++) {
+            for (int j = 0; j <= n; j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                } else if (j == 0) {
+                    dp[i][j] = i;
+                } else {
+                    dp[i][j] = Math.min(Math.min(dp[i - 1][j - 1] + (str1.charAt(i - 1) == str2.charAt(j - 1) ? 0 : 1),
+                                    dp[i - 1][j] + 1),
+                            dp[i][j - 1] + 1);
+                }
+            }
+        }
+        return dp[m][n];
+    }
+
+}
+
+
+
