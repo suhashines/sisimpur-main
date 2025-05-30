@@ -35,17 +35,9 @@ public class BookService {
 
     //refactored api
     public Book createBook(BookRequest bookData) {
-    
-        // Fetch author
-        Long authorId = bookData.getAuthorId().longValue();
-
-        // System.out.println("author id:"+authorId);
-        Optional<Author> author = authorRepository.findById(authorId);
-
-        if (author.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found with ID: " + authorId);
-        }
-
+        
+        Author author = authorRepository.findById(bookData.getAuthorId().longValue()).get() ;
+               
         // Prepare Book entity
         Book book = new Book();
         book.setTitle(bookData.getTitle().trim());
@@ -62,7 +54,7 @@ public class BookService {
         book.setPublishedYear(bookData.getPublishedYear() != null ? bookData.getPublishedYear() : 0);
 
         // Associate author
-        book.setAuthor(author.get());
+        book.setAuthor(author);
 
         return bookRepository.save(book);
     }

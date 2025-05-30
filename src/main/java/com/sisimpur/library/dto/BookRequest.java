@@ -1,4 +1,6 @@
 package com.sisimpur.library.dto;
+import com.sisimpur.library.validation.AuthorExists;
+
 import jakarta.validation.constraints.* ;
 
 public class BookRequest {
@@ -10,7 +12,9 @@ public class BookRequest {
 
     @NotNull
     @Min(0)
+    @AuthorExists
     private Integer authorId ;
+
     private String genre ;
 
     @Min(0)
